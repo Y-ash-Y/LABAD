@@ -1,0 +1,25 @@
+# LABAD runtime dependencies (pinned to the dev environment for reproducibility).
+# Jupyter is dev-only (notebooks/01_eda.ipynb) and deliberately excluded to keep
+# the Docker image slim — install it separately for local EDA: pip install jupyter
+
+# ── Core ML / numerics ──────────────────────────────────────────
+torch==2.12.0
+numpy==2.4.6
+pandas==2.3.3
+scikit-learn==1.8.0
+scipy==1.17.1
+
+# ── Plotting ────────────────────────────────────────────────────
+matplotlib==3.10.9
+seaborn==0.13.2
+
+# ── RAG: MITRE ATT&CK retrieval ────────────────────────────────
+faiss-cpu==1.14.2
+sentence-transformers==5.5.1
+
+# ── LLM client + utils ─────────────────────────────────────────
+requests==2.34.2
+tqdm==4.67.3
+
+# ── Experiment tracking (Week 4) ───────────────────────────────
+mlflow==3.14.0

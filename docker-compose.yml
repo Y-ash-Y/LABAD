@@ -1,0 +1,25 @@
+# `version:` is intentionally omitted — Compose v2 ignores it and warns if set.
+services:
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    # Pull the model once the daemon is up. The pipeline expects llama3.1:8b.
+    # (First run downloads ~4.7GB into the named volume; cached thereafter.)
+
+  labad:
+    build: .
+    depends_on:
+      - ollama
+    environment:
+      - OLLAMA_URL=http://ollama:11434/api/generate
+    volumes:
+      # Bind-mount data + checkpoints so the container reads host artifacts
+      # (trained model, Week 2 scores, MITRE index) and writes reports back out.
+      - ./data:/app/data
+      - ./checkpoints:/app/checkpoints
+
+volumes:
+  ollama_data:

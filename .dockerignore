@@ -1,0 +1,17 @@
+# Large data + artifacts are bind-mounted via docker-compose, not baked in.
+# Without this, `COPY . .` would pull the 14GB+ CERT CSVs and the venv
+# into the image — bloating build context to tens of GB.
+.venv/
+data/
+checkpoints/
+__pycache__/
+**/__pycache__/
+*.pyc
+.DS_Store
+**/.DS_Store
+.git/
+notebooks/
+mlruns/
+mlartifacts/
+mlflow.db
+*.log

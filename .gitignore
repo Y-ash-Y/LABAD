@@ -1,0 +1,34 @@
+# ── Data (huge / derived — regenerate locally) ──────────────────
+# CERT raw (~16GB) + processed + reports + mitre_index
+data/
+# trained model artifacts
+checkpoints/
+*.pkl
+*.npy
+
+# ── Environments / caches ───────────────────────────────────────
+.venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# ── Experiment tracking ─────────────────────────────────────────
+mlruns/
+mlartifacts/
+mlflow.db
+
+# ── OS / misc ───────────────────────────────────────────────────
+.DS_Store
+**/.DS_Store
+*.log
+
+# ── LaTeX build artifacts (keep the .tex/.pdf, drop the rest) ────
+*.aux
+*.out
+*.toc
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+*.synctex.gz
