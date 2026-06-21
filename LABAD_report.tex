@@ -334,8 +334,27 @@ elsewhere. The effect is real and significant: warnings are
 \textbf{$2.28\times$ enriched} before onset ($15.6\%$ vs.\ $6.9\%$ baseline),
 with $24/30$ users showing the enrichment (chance is $15/30$; binomial
 $p = 7.2\times10^{-4}$, Wilcoxon $p = 2.1\times10^{-4}$), and the direction
-of the effect is robust across detector parameters. This is a statistically
-significant pre-onset signal, not an artifact.
+of the effect is robust across detector parameters (Table~\ref{tab:ews}).
+This is a statistically significant pre-onset signal, not an artifact.
+
+\begin{table}[t]
+  \centering
+  \caption{Critical-slowing-down early-warning enrichment in the $45$-day
+  pre-onset band, scenario-1 insiders ($n=30$).}
+  \label{tab:ews}
+  \begin{tabular}{lc}
+    \toprule
+    Quantity & Value \\
+    \midrule
+    Warning density, pre-onset band & $15.6\%$ \\
+    Warning density, baseline (elsewhere) & $6.9\%$ \\
+    Enrichment & $2.28\times$ \\
+    Users with pre-onset $>$ baseline & $24/30$ (chance $15/30$) \\
+    Binomial test & $p = 7.2\times10^{-4}$ \\
+    Wilcoxon signed-rank & $p = 2.1\times10^{-4}$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 We are careful about the claim: the $6.9\%$ baseline rate is too high for CSD
 to stand alone as an alarm. Its value is as an \emph{early-warning layer}
