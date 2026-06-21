@@ -76,6 +76,8 @@ This project is documented with the negative results, because diagnosing *why* s
 - **The `R[0,t]` changepoint readout is a no-op.** A naive BOCPD implementation reads off changepoints as `R[0,t]`, but algebra shows `R[0,t] ≡ hazard` at every step — it carries zero information. The real signal is the run-length posterior *collapsing onto short run lengths*; LABAD detects that instead. See `models/bocpd.py`.
 - **CUSUM and Critical Slowing Down don't beat BOCPD here — and we root-caused why.** Under honest causal evaluation both false-alarm immediately. Cause: overlapping 30-day windows make the score series heavily autocorrelated (lag-1 ≈ 0.83–0.99), violating their independence assumptions. (`models/cusum.py`, `models/early_warning.py`, `eval/run_ensemble.py`.)
 - **The real bottleneck was the *signal*, not the detector.** The scalar reconstruction error averages over all 18 features, so a gradual insider's onset is a **1.03× non-event** in the scalar — yet **151× in a single feature** (`exe_access_count`). Per-feature scoring (`eval/run_perfeature.py`) recovers that signal and adds feature-level explainability, while matching the scalar on sharp insiders. *You can't detect what the score doesn't encode.*
+- **Gradual insiders aren't just hard — they're unlocalizable at the CERT label.** Pushing scenario-2 further showed the discriminating raw behaviors are *more* active **before** the labeled onset than after (`job_site_visits`: 22.5% of pre-onset days vs 14.3% after). The label marks the final exfiltration act, not a behavioral discontinuity — so there is no bifurcation there to detect. A negative result root-caused to the *data*, not the method.
+- **Critical slowing down *does* work — as early warning, not detection.** Anomaly scores show rising variance + autocorrelation **before** abrupt onsets: warnings are **2.28× enriched** in the 45 days pre-onset (24/30 users, binomial *p* = 7×10⁻⁴, Wilcoxon *p* = 2×10⁻⁴), robust across parameters (`eval/run_early_warning.py`). A statistically significant predictive signature — the dynamical-systems framing made falsifiable and confirmed.
 
 ---
 
@@ -91,6 +93,7 @@ python train.py --epochs 50          # 1. train autoencoder (MLflow-tracked)
 python eval/run_week2.py             # 2. anomaly scoring + NP calibration
 python eval/run_bocpd.py             # 3. BOCPD onset detection
 python eval/run_perfeature.py        # 3b. per-feature ablation
+python eval/run_early_warning.py     # 3c. critical-slowing-down early warning
 python eval/run_week3.py             # 4. LLM threat reports (needs Ollama)
 ```
 
@@ -125,6 +128,7 @@ LABAD/
 │   ├── run_week2.py      # detection + calibration
 │   ├── run_bocpd.py      # onset detection
 │   ├── run_perfeature.py # per-feature ablation
+│   ├── run_early_warning.py # critical-slowing-down early warning
 │   ├── run_ensemble.py   # BOCPD + CUSUM + CSD comparison
 │   └── run_week3.py      # RAG + LLM threat reports
 ├── llm/                  # MITRE ATT&CK RAG + Ollama explainer

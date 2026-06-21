@@ -48,12 +48,17 @@ detecting the moment its statistical regime changes: a behavioral
 precision@10 for detection, and localizes the onset of abrupt insiders
 (CERT scenario~1) to within $\pm 7$ days in $\approx 80\%$ of cases, a
 median of $3$ days, typically $1$--$2$ days \emph{before} the labeled
-onset. We additionally report negative results---CUSUM and critical-slowing-down
-detectors fail here, and we root-cause the failure to the
-\emph{signal} rather than the algorithm: the scalar reconstruction error
-dilutes a $151\times$ single-feature spike into a $1.03\times$ non-event.
-The pipeline is containerized (Docker, CPU-only $2.93$\,GB image) and
-experiment-tracked (MLflow).
+onset. We additionally report rigorous negative and positive results. As causal
+\emph{detectors}, CUSUM and critical slowing down fail, root-caused to the
+signal (heavy autocorrelation; scalar dilution of a $151\times$ single-feature
+spike into a $1.03\times$ non-event); we further show that gradual insiders
+(scenario~2) are \emph{unlocalizable at the label itself}, because the
+discriminating behaviors are more active before the labeled onset than after.
+As an \emph{early-warning} layer, by contrast, critical slowing down yields a
+statistically significant $2.28\times$ enrichment of pre-onset signatures
+($24/30$ abrupt insiders, $p<10^{-3}$), confirming the dynamical-systems
+prediction. The pipeline is containerized (Docker, CPU-only $2.93$\,GB image)
+and experiment-tracked (MLflow).
 \end{abstract}
 
 \section{Introduction}
@@ -86,7 +91,11 @@ online.
         do not improve on BOCPD, root-caused to signal autocorrelation and
         scalar-score dilution rather than detector choice.
   \item A per-feature ablation that recovers the diluted signal and adds
-        feature-level explainability.
+        feature-level explainability, and a demonstration that gradual-insider
+        onset is unlocalizable at the CERT label itself.
+  \item A statistically significant ($p<10^{-3}$) critical-slowing-down
+        early-warning signal preceding abrupt onsets, validating the
+        dynamical-systems framing as predictive, not merely descriptive.
 \end{enumerate}
 
 \section{Data and Feature Engineering}
@@ -241,16 +250,18 @@ To target the gradual-drift failure we added two principled complements
 and evaluated them honestly (first causal alarm; $|\text{latency}|>14$
 days counts as a miss).
 
-\paragraph{CUSUM and critical slowing down both fail.} Under causal
-evaluation both detectors false-alarm almost immediately for every user
-(median latency $-84$ to $-182$ days), and scenario~2 detection is
-$0/30$ across all transforms (raw, log, differenced). The cause is the
-\emph{signal}: overlapping $30$-day windows make the score series heavily
-autocorrelated (lag-$1$ autocorrelation $0.83$--$0.99$), violating the
-near-independence both methods assume, and the near-constant early window
-yields a degenerate baseline standard deviation ($\sim 10^{-3}$) that any
-threshold trips. BOCPD's sequential Bayesian model is comparatively robust
-to this structure.
+\paragraph{CUSUM and CSD fail as causal onset detectors.} Used as causal
+detectors, both false-alarm almost immediately for every user (median
+latency $-84$ to $-182$ days), and scenario~2 detection is $0/30$ across all
+transforms (raw, log, differenced). The cause is the \emph{signal}:
+overlapping $30$-day windows make the score series heavily autocorrelated
+(lag-$1$ autocorrelation $0.83$--$0.99$), violating the near-independence
+both methods assume, and the near-constant early window yields a degenerate
+baseline standard deviation ($\sim 10^{-3}$) that any threshold trips.
+BOCPD's sequential Bayesian model is comparatively robust to this structure.
+(Critical slowing down is nonetheless useful in a different role---as a
+pre-onset \emph{early-warning} signal rather than a detector;
+Section~\ref{sec:ews}.)
 
 \paragraph{The bottleneck is the scalar score, not the detector.} The
 scalar in Eq.~\eqref{eq:scalar} averages over all $18$ features. At onset,
@@ -275,10 +286,20 @@ which suppresses single-feature noise). This \emph{matches} the scalar on
 scenario~1 ($25/30$ within $\pm 7$ days, median $-3$ days) and---crucially---
 identifies \emph{which} behaviors drove the alert, adding explainability the
 scalar cannot. It confirms the dilution diagnosis quantitatively
-(Table~\ref{tab:dilution}). Recovering gradual (scenario~2) onsets remains
-open: their signal lives in $1$--$2$ \emph{sparse} features, so any
-single-feature trigger false-alarms across $18$ noisy dimensions---a sparse
-multivariate online-changepoint problem we leave to future work.
+(Table~\ref{tab:dilution}). Pursuing scenario~2 further with sparse and
+offline multivariate changepoint methods produced a sharper conclusion: the
+gradual onset is \emph{not localizable at all}, and the reason is a property
+of the data, not the detector. The discriminating raw behaviors are in fact
+\emph{more active before the labeled onset than after}---\texttt{job\_site\_visits}
+is active on $22.5\%$ of pre-onset days versus $14.3\%$ after, and
+\texttt{cloud\_storage\_visits} on $11.6\%$ versus $4.1\%$---and the
+corresponding reconstruction error is diffusely elevated across $70$--$100$
+scattered days rather than aligned to onset. The CERT scenario-2 label marks
+the final exfiltration act, not a behavioral discontinuity. A
+bifurcation detector correctly finds bifurcations; scenario~2 has none at the
+label to find. (The offline detector does still correctly identify
+\texttt{exe\_access\_count} as the most-changed feature for $27/30$
+scenario-2 users, so the per-feature view retains its explanatory value.)
 
 \begin{table}[t]
   \centering
@@ -293,6 +314,33 @@ multivariate online-changepoint problem we leave to future work.
     \bottomrule
   \end{tabular}
 \end{table}
+
+\section{Early Warning via Critical Slowing Down}
+\label{sec:ews}
+
+The bifurcation framing makes a falsifiable prediction. In dynamical-systems
+theory, a system approaching a tipping point loses resilience, which appears
+as rising lag-$1$ autocorrelation and rising variance \emph{before} the
+transition---``critical slowing down'' \cite{scheffer2009}. If an abrupt
+insider's onset is a genuine bifurcation, these signatures should appear in
+the anomaly-score series in the weeks preceding it.
+
+We test this directly. For each scenario-1 user we compute rolling
+(linear-detrended) lag-$1$ autocorrelation and variance, and flag an
+early-warning day when \emph{both} are significantly rising (Kendall's
+$\tau > 0.4$ over a trailing window). We then compare the density of warning
+days in the $45$-day pre-onset band against the same user's baseline rate
+elsewhere. The effect is real and significant: warnings are
+\textbf{$2.28\times$ enriched} before onset ($15.6\%$ vs.\ $6.9\%$ baseline),
+with $24/30$ users showing the enrichment (chance is $15/30$; binomial
+$p = 7.2\times10^{-4}$, Wilcoxon $p = 2.1\times10^{-4}$), and the direction
+of the effect is robust across detector parameters. This is a statistically
+significant pre-onset signal, not an artifact.
+
+We are careful about the claim: the $6.9\%$ baseline rate is too high for CSD
+to stand alone as an alarm. Its value is as an \emph{early-warning layer}
+atop BOCPD---evidence that the dynamical-systems view is not merely a
+metaphor but yields a measurable, predictive signature ahead of the event.
 
 \section{LLM Threat Reports}
 
@@ -354,12 +402,14 @@ model and curve artifacts) against a SQLite backend, viewable with
 
 \section{Limitations and Future Work}
 \begin{itemize}[itemsep=2pt,topsep=2pt]
-  \item \textbf{Gradual insiders.} Scenario~2 onset detection is unsolved;
-        the signal is recoverable per-feature but requires sparse
-        multivariate online changepoint methods.
-  \item \textbf{Early warning.} Critical slowing down (rising variance and
-        autocorrelation before a tipping point) could \emph{predict} onset
-        rather than detect it, on a decorrelated signal.
+  \item \textbf{Gradual insiders.} Scenario~2 onset is not localizable at the
+        labeled date because the label is not a behavioral discontinuity; a
+        better evaluation would label the behavioral onset (start of job-site
+        activity) rather than the final exfiltration act.
+  \item \textbf{Early warning to alarm.} The critical-slowing-down signal is
+        significant but not yet a standalone alarm; lowering its baseline rate
+        (e.g.\ on a decorrelated or per-feature signal) could turn the
+        early-warning enrichment into a deployable predictor.
   \item \textbf{Dataset.} CERT is synthetic; transfer to real telemetry is
         the key external-validity question.
   \item \textbf{Beyond human insiders.} The core capability---detect when
